@@ -9,7 +9,7 @@ import { FORMATIONS, type Frame, type MatchChange, type MatchEvent, type MatchRe
 import { AppError } from "@/lib/errors";
 import type { AppUser } from "@/lib/session";
 import type { CrestSpec } from "@/seed/generate";
-import { getCareer } from "./service";
+import { getCareer } from "./context";
 
 type MatchRow = typeof schema.matches.$inferSelect;
 
@@ -57,8 +57,8 @@ async function loadOwnedMatch(user: AppUser, matchId: number): Promise<{ match: 
   const db = getDb();
   const [match] = await db.select().from(schema.matches).where(eq(schema.matches.id, matchId));
   if (!match || !match.isUserMatch || !match.snapshot) throw new AppError("Partida não encontrada", 404);
-  const { career } = await getCareer(user, match.careerId);
-  return { match, userClubId: career.clubId };
+  const ctx = await getCareer(user, match.careerId);
+  return { match, userClubId: ctx.clubId };
 }
 
 function recompute(match: MatchRow): MatchResult {

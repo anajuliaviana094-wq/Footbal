@@ -91,6 +91,15 @@ export function NewCareerPicker({ leagues, clubs }: { leagues: League[]; clubs: 
       <form action={action} className="sticky bottom-4 z-10">
         <input type="hidden" name="leagueId" value={leagueId ?? ""} />
         <input type="hidden" name="clubId" value={clubId ?? ""} />
+        {clubId && (
+          <label className="card mb-2 flex cursor-pointer items-center gap-3 p-3 text-sm">
+            <input type="checkbox" name="multiplayer" className="h-5 w-5 accent-[var(--color-accent)]" />
+            <span>
+              <b>👥 Liga com amigos</b>
+              <span className="block text-xs text-[var(--color-muted)]">Gera um código de convite para seus amigos assumirem outros clubes do mesmo país.</span>
+            </span>
+          </label>
+        )}
         {state?.error && <p className="mb-2 rounded-lg bg-rose-500/15 px-3 py-2 text-sm text-rose-200">{state.error}</p>}
         <button className="btn btn-primary w-full py-3 text-lg" disabled={!clubId || pending}>
           {pending ? "Preparando a temporada..." : clubId ? `Assumir o ${leagueClubs.find((c) => c.id === clubId)?.name}` : "Escolha um clube"}

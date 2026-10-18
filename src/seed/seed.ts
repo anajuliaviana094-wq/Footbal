@@ -24,6 +24,8 @@ export async function seedWorld(db: PgDatabase<PgQueryResultHKT, typeof schema>)
         level: sql`excluded.level`,
         isFree: sql`excluded.is_free`,
         sortOrder: sql`excluded.sort_order`,
+        systemId: sql`excluded.system_id`,
+        tier: sql`excluded.tier`,
       },
     });
 

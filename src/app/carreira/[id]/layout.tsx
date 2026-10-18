@@ -3,9 +3,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { Crest } from "@/components/Crest";
 import { getCareer } from "@/career/service";
 import { AppError } from "@/lib/errors";
+import { dayLabel } from "@/lib/day";
 import { requireUser } from "@/lib/session";
 import { CareerNav } from "./CareerNav";
 import { loadCareer } from "./data";
+import { deleteCareerAction } from "@/app/carreiras/actions";
 
 export default async function CareerLayout(props: LayoutProps<"/carreira/[id]">) {
   const { id } = await props.params;
@@ -13,35 +15,41 @@ export default async function CareerLayout(props: LayoutProps<"/carreira/[id]">)
   if (!data) {
     const user = await requireUser();
     let message = "Carreira não encontrada";
-    let premium = false;
+    let code = "";
     try {
       await getCareer(user, id);
     } catch (err) {
       if (err instanceof AppError) {
         message = err.message;
-        premium = err.code === "premium_required";
+        code = err.code;
       }
     }
     return (
       <>
         <AppHeader user={user} />
         <main className="mx-auto max-w-md px-4 py-16 text-center">
-          <div className="text-5xl">{premium ? "🔒" : "🤷"}</div>
+          <div className="text-5xl">{code === "premium_required" ? "🔒" : code === "legacy" ? "🕰️" : "🤷"}</div>
           <p className="mt-4 text-lg">{message}</p>
           <div className="mt-6 flex justify-center gap-2">
-            {premium && <Link href="/planos" className="btn btn-gold">Ver planos</Link>}
+            {code === "premium_required" && <Link href="/planos" className="btn btn-gold">Ver planos</Link>}
+            {code === "legacy" && (
+              <form action={deleteCareerAction}>
+                <input type="hidden" name="careerId" value={id} />
+                <button className="btn btn-primary">Excluir carreira antiga</button>
+              </form>
+            )}
             <Link href="/carreiras" className="btn btn-ghost">Minhas carreiras</Link>
           </div>
         </main>
       </>
     );
   }
-  const { user, career, club, league } = data;
+  const { user, career, club, league, system } = data;
   return (
     <>
       <AppHeader user={user} />
       <div className="mx-auto flex max-w-7xl">
-        <CareerNav careerId={id} />
+        <CareerNav careerId={id} multiplayer={career.isMultiplayer} />
         <div className="min-w-0 flex-1 px-4 pb-28 pt-4 md:px-6 md:pb-10">
           <div className="mb-4 flex items-center gap-3">
             <Crest crest={club.crest} size={40} />
@@ -49,7 +57,8 @@ export default async function CareerLayout(props: LayoutProps<"/carreira/[id]">)
               <div className="truncate font-display text-lg font-bold uppercase leading-tight">{club.name}</div>
               <div className="truncate text-xs text-[var(--color-muted)]">
                 {league.flag} {league.name} · Temporada {career.season} ·{" "}
-                {career.status === "season_over" ? "encerrada" : `Rodada ${career.currentRound}/${career.totalRounds}`}
+                {career.status === "season_over" ? "encerrada" : `${dayLabel(data.day, system.cup.name, career.calendar)} (dia ${career.currentRound}/${career.totalRounds})`}
+                {career.isMultiplayer && " · 👥 com amigos"}
               </div>
             </div>
           </div>

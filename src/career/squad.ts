@@ -7,6 +7,7 @@ import { pickBestXI, roleScore } from "@/engine/lineup";
 import { applyProgression, computeOverall } from "@/engine/ratings";
 import { Rng, hashSeed } from "@/engine/rng";
 import type { Attributes, EnginePlayer, Pressing, Style, Tactics, TeamInput, Traits, Position } from "@/engine/types";
+import { careerWage, playerMarketValue } from "./economy";
 import { isAvailable } from "./rules";
 
 export interface SquadPlayer {
@@ -41,6 +42,9 @@ export interface SquadPlayer {
   reds: number;
   avgRating: number | null;
   scoutReport: string | null;
+  squadRole: "first" | "youth";
+  transferListed: boolean;
+  askingPrice: number | null;
 }
 
 type PlayerRow = typeof schema.players.$inferSelect;
@@ -48,6 +52,10 @@ type StateRow = typeof schema.careerPlayerState.$inferSelect;
 
 export function toSquadPlayer(p: PlayerRow, s: StateRow): SquadPlayer {
   const attrs = applyProgression(p.attributes, s.progression);
+  const overall = computeOverall(attrs, p.position);
+  const age = p.age + s.ageDelta;
+  const potential = Math.max(p.potential, overall);
+  const avgRating = s.appearances ? Math.round((s.ratingSum / s.appearances) * 100) / 100 : null;
   return {
     id: p.id,
     clubId: s.clubId,
@@ -56,17 +64,17 @@ export function toSquadPlayer(p: PlayerRow, s: StateRow): SquadPlayer {
     lastName: p.lastName,
     shirt: p.shirtNumber,
     position: p.position,
-    age: p.age + s.ageDelta,
+    age,
     nationality: p.nationality,
     foot: p.foot,
     height: p.height,
     archetype: p.archetype,
-    overall: computeOverall(attrs, p.position),
-    potential: Math.max(p.potential, computeOverall(attrs, p.position)),
+    overall,
+    potential,
     attrs,
     traits: p.traits,
-    value: p.value,
-    wage: p.wage,
+    value: playerMarketValue({ overall, age, potential, avgRating, appearances: s.appearances }),
+    wage: s.wage ?? careerWage(p.wage),
     condition: Math.round(s.condition),
     morale: Math.round(s.morale),
     yellowAccum: s.yellowAccum,
@@ -78,8 +86,11 @@ export function toSquadPlayer(p: PlayerRow, s: StateRow): SquadPlayer {
     assists: s.assists,
     yellows: s.yellows,
     reds: s.reds,
-    avgRating: s.appearances ? Math.round((s.ratingSum / s.appearances) * 100) / 100 : null,
+    avgRating,
     scoutReport: p.scoutReport,
+    squadRole: s.squadRole,
+    transferListed: s.transferListed,
+    askingPrice: s.askingPrice,
   };
 }
 
@@ -132,7 +143,7 @@ export function resolveUserLineup(
   tactics: Tactics,
   saved: { starters: number[]; bench: number[] } | null,
 ): { starters: EnginePlayer[]; bench: EnginePlayer[]; replaced: { outId: number; inId: number }[] } {
-  const available = squad.filter((p) => p.available).map(toEngine);
+  const available = squad.filter((p) => p.available && p.squadRole === "first").map(toEngine);
   const byId = new Map(available.map((p) => [p.id, p]));
   if (!saved) {
     const auto = pickBestXI(available, tactics.formation);
@@ -209,6 +220,6 @@ export function buildTeam(
 
 export function buildAiTeam(club: ClubInfo, squad: SquadPlayer[], opponentStrength: number, seed: number): TeamInput {
   const tactics = aiTactics(club, opponentStrength, seed);
-  const available = squad.filter((p) => p.available).map(toEngine);
+  const available = squad.filter((p) => p.available && p.squadRole === "first").map(toEngine);
   return buildTeam(club, tactics, pickBestXI(available, tactics.formation), true);
 }

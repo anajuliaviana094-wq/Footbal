@@ -87,6 +87,17 @@ Sem `ANTHROPIC_API_KEY` o jogo funciona normalmente com narração/relatórios p
 - **IA**: uma chamada por partida para os eventos-chave (JSON validado por schema, `thinking` desligado, `effort: low`, `max_tokens` baixo, timeout curto). A narração chega em segundo plano; o playback nunca espera por ela.
 - **Fases**: todas as 7 fases foram entregues juntas neste primeiro commit; o roteiro acima permite validar uma por uma.
 
+## Versão 2 — mundo vivo
+
+- **Acesso e rebaixamento:** as divisões do mesmo país (hoje Pindorama — Elite e Acesso) são simuladas juntas. Os 4 últimos caem e os 4 primeiros sobem.
+- **Copas nacionais:** mata-mata em jogo único, com pênaltis, entre todos os clubes do país. Os mais fortes entram direto na 2ª fase para fechar a chave, e as fases ficam intercaladas no calendário (`src/career/calendar.ts`, `cup.ts`).
+- **Finanças:** cada clube tem caixa. Entram bilheteria (capacidade × ocupação, que sobe com a boa fase), TV, patrocínio e prêmios por posição e por fase da copa; saem salários e investimentos. Extrato em `club_transactions` (`src/career/economy.ts`).
+- **Valores dinâmicos:** o valor de mercado depende de geral, idade, potencial e nota média; o salário é por carreira.
+- **Mercado:** busca em todas as ligas. A IA responde na hora (aceita, recusa ou faz contraproposta; o jogador pode recusar ir para um clube menor). Você coloca jogadores à venda e recebe propostas da IA a cada dia de jogo; entre técnicos humanos a proposta fica pendente por 2 dias (`src/career/market.ts`, `transfers.ts`). Entre temporadas a IA também negocia entre si.
+- **Base:** levas de garotos de 16 a 18 anos a cada temporada, com potencial definido pela estrutura (níveis 1 a 5, que custam caixa). Dá para promover ou dispensar (`src/career/academy.ts`).
+- **Liga com amigos (multiplayer):** o anfitrião cria a carreira com código de convite e os amigos entram com clubes livres do mesmo país. O dia é processado quando todos marcam “pronto” (ou o anfitrião força), e cada um assiste ao replay do seu jogo.
+- Carreiras criadas antes da v2 aparecem como “versão antiga” e só podem ser excluídas.
+
 ## Fora do escopo do MVP (arquitetura preparada)
 
-Transferências (`career_player_state.club_id` já é por carreira), finanças, base, copas, acesso/rebaixamento, multiplayer, narração por voz e campo 3D.
+Narração por voz, IA ligada por padrão, contratos/rescisões, divisões inferiores para os demais países e chat entre técnicos.

@@ -43,6 +43,8 @@ type Phase = "pre" | "loading" | "playing" | "finishing" | "done";
 interface PreMatchInfo {
   careerId: string;
   round: number;
+  /** ex.: "Rodada 5" ou "Taça Pindorama · Semifinal" */
+  label: string;
   home: { name: string; crest: PayloadTeam["crest"] };
   away: { name: string; crest: PayloadTeam["crest"] };
   hasLiveMatch: boolean;
@@ -94,10 +96,15 @@ export function MatchCenter({ info }: { info: PreMatchInfo }) {
       setPhase("pre");
       return;
     }
+    if (!data.matchId) {
+      router.refresh();
+      setPhase("pre");
+      return;
+    }
     const m = await fetch(`/api/matches/${data.matchId}`).then((r) => r.json());
     setPayload(m);
+    // sem router.refresh(): a página já estaria no próximo dia e o resultado sumiria
     setPhase("done");
-    router.refresh();
   }, [info.careerId, router]);
 
   const finishRound = useCallback(async () => {
@@ -110,13 +117,12 @@ export function MatchCenter({ info }: { info: PreMatchInfo }) {
       return;
     }
     setPhase("done");
-    router.refresh();
-  }, [info.careerId, router]);
+  }, [info.careerId]);
 
   if (phase === "pre" || phase === "loading" || (phase === "finishing" && !payload)) {
     return (
       <div className="card mx-auto max-w-2xl p-6 text-center">
-        <div className="label">Rodada {info.round}</div>
+        <div className="label">{info.label}</div>
         <div className="mt-4 flex items-center justify-around">
           <div className="flex w-36 flex-col items-center gap-2"><Crest crest={info.home.crest} size={72} /><b>{info.home.name}</b></div>
           <span className="font-display text-3xl font-bold text-[var(--color-muted)]">VS</span>
@@ -678,4 +684,27 @@ function eventIcon(e: MatchEvent): string {
     case "tactic": return "📋";
     default: return "·";
   }
+}
+
+/** Replay de uma partida já disputada (inclusive da liga com amigos). */
+export function MatchReplay({ matchId }: { matchId: number }) {
+  const [payload, setPayload] = useState<MatchPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/matches/${matchId}`)
+      .then(async (r) => {
+        const d = await r.json();
+        if (!alive) return;
+        if (r.ok) setPayload(d);
+        else setError(d.error ?? "Erro ao carregar o replay");
+      })
+      .catch(() => alive && setError("Erro ao carregar o replay"));
+    return () => {
+      alive = false;
+    };
+  }, [matchId]);
+  if (error) return <p className="rounded-lg bg-rose-500/15 px-3 py-2 text-rose-200">{error}</p>;
+  if (!payload) return <div className="card h-64 animate-pulse" />;
+  return <LivePlayback payload={payload} setPayload={setPayload} phase="done" error={null} aiCount={0} onFinish={() => {}} startAtEnd={false} />;
 }

@@ -8,10 +8,10 @@ export default async function TacticsPage(props: PageProps<"/carreira/[id]/tatic
   const { id } = await props.params;
   const data = await loadCareer(id);
   if (!data) return null;
-  const squad = await loadSquad(getDb(), id, data.career.clubId);
-  const tactics = data.career.tactics;
+  const squad = (await loadSquad(getDb(), id, data.clubId)).filter((p) => p.squadRole === "first");
+  const tactics = data.member.tactics;
   // a escalação salva é usada como está; sem escalação salva, sugerimos a automática
-  const saved = data.career.lineup;
+  const saved = data.member.lineup;
   const initial = saved ?? (() => {
     const auto = resolveUserLineup(squad, tactics, null);
     return { starters: auto.starters.map((p) => p.id), bench: auto.bench.map((p) => p.id) };

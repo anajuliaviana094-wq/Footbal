@@ -37,6 +37,8 @@ export interface CrestSpec {
 
 export interface SeedLeague {
   id: string;
+  systemId: string;
+  tier: number;
   name: string;
   country: string;
   flag: string;
@@ -116,7 +118,7 @@ function pickAge(rng: Rng): number {
   );
 }
 
-function marketValue(overall: number, age: number): number {
+export function marketValue(overall: number, age: number): number {
   const ageFactor = age <= 21 ? 1.4 : age <= 27 ? 1.2 : age <= 30 ? 1 : age <= 32 ? 0.6 : 0.35;
   const v = 0.05 * Math.pow(1.17, overall - 50) * ageFactor; // milhões
   return Math.max(25_000, Math.round((v * 1_000_000) / 5000) * 5000);
@@ -192,6 +194,8 @@ export function generateWorld(seed = SEED): { leagues: SeedLeague[]; clubs: Seed
     const rng = new Rng(hashSeed(seed, def.id));
     leagues.push({
       id: def.id,
+      systemId: def.systemId,
+      tier: def.tier,
       name: def.name,
       country: def.country,
       flag: def.flag,
@@ -312,4 +316,52 @@ function generateSquad(rng: Rng, def: LeagueDef, club: SeedClub, nextId: () => n
     });
   }
   return squad;
+}
+
+/** Gera um jogador da base (16–18 anos) para uma carreira. `quality` ≈ potencial médio esperado. */
+export function generateYouthPlayer(
+  rng: Rng,
+  opts: { pool: NamePool; foreignPools: Partial<Record<NamePool, number>>; position: Position; quality: number; usedShirts: Set<number>; usedNames: Set<string> },
+): Omit<SeedPlayer, "id" | "clubId"> {
+  const age = rng.int(16, 18);
+  const arch = rng.chance(0.6) ? ARCHETYPE_BY_ID.get("jovem_promessa")! : chooseArchetype(rng, opts.position, 25);
+  const potential = Math.max(50, Math.min(94, Math.round(opts.quality + rng.gauss(0, 6))));
+  const current = Math.max(38, Math.round(potential - rng.int(12, 24)));
+  const attrs = genAttrs(rng, opts.position, arch, current);
+  const overall = computeOverall(attrs, opts.position);
+  const poolKey: NamePool = rng.chance(0.06)
+    ? rng.weighted(Object.keys(opts.foreignPools) as NamePool[], Object.values(opts.foreignPools) as number[])
+    : opts.pool;
+  const pool = POOLS[poolKey];
+  let first = "";
+  let last = "";
+  for (let i = 0; i < 40; i++) {
+    first = rng.pick(pool.first);
+    last = rng.pick(pool.last);
+    const full = normalize(`${first} ${last}`);
+    if (!FAMOUS_NAME_BLOCKLIST.has(full) && !opts.usedNames.has(full)) break;
+  }
+  opts.usedNames.add(normalize(`${first} ${last}`));
+  let shirt = 40;
+  while (opts.usedShirts.has(shirt)) shirt++;
+  opts.usedShirts.add(shirt);
+  const value = marketValue(overall, age);
+  return {
+    firstName: first,
+    lastName: last,
+    shortName: poolKey === "br" && rng.chance(0.4) ? first : last,
+    nationality: pool.nationality,
+    age,
+    position: opts.position,
+    foot: rng.weighted(["D", "E", "A"] as const, [75, 20, 5]),
+    height: genHeight(rng, opts.position, arch),
+    archetype: arch.id,
+    attrs,
+    traits: genTraits(rng, arch, age),
+    potential: Math.max(potential, overall),
+    overall,
+    value,
+    wage: Math.max(1_500, Math.round((value * 0.0045) / 500) * 500),
+    shirtNumber: shirt,
+  };
 }

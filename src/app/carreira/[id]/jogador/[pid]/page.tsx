@@ -8,6 +8,8 @@ import { formatMoney } from "@/lib/format";
 import { ARCHETYPE_BY_ID } from "@/seed/archetypes";
 import { loadCareer } from "../../data";
 import { ScoutReport } from "./ScoutReport";
+import { PlayerActions } from "./PlayerActions";
+import { quote } from "@/career/market";
 
 const OUTFIELD: (keyof Attributes)[] = ["finalizacao", "passe", "drible", "cruzamento", "cabeceio", "visao", "desarme", "marcacao", "posicionamento", "velocidade", "resistencia", "forca"];
 const GK: (keyof Attributes)[] = ["reflexo", "posicionamento", "saida_gol", "jogo_pes", "forca", "resistencia"];
@@ -20,7 +22,7 @@ export default async function PlayerPage(props: PageProps<"/carreira/[id]/jogado
   if (!profile) notFound();
   const { player: p, club } = profile;
   const keys = p.position === "GOL" ? GK : OUTFIELD;
-  const isMine = club.id === data.career.clubId;
+  const isMine = club.id === data.clubId;
 
   return (
     <div className="space-y-4">
@@ -60,6 +62,21 @@ export default async function PlayerPage(props: PageProps<"/carreira/[id]/jogado
       </div>
 
       <ScoutReport careerId={id} playerId={p.id} initial={p.scoutReport} />
+
+      {p.squadRole === "first" && (
+        <PlayerActions
+          careerId={id}
+          playerId={p.id}
+          name={p.name}
+          isMine={isMine}
+          listed={p.transferListed}
+          askingPrice={p.askingPrice}
+          value={p.value}
+          wage={p.wage}
+          balance={data.cclub.balance}
+          quote={isMine ? null : await quote(data, p.id)}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="card p-5">

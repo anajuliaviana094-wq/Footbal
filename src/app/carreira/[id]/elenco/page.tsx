@@ -3,13 +3,14 @@ import { getDb } from "@/db";
 import { Bar, CardIcon, OverallBadge, PageTitle, PosBadge } from "@/components/ui";
 import { loadSquad } from "@/career/squad";
 import { ARCHETYPE_BY_ID } from "@/seed/archetypes";
+import { formatMoney } from "@/lib/format";
 import { loadCareer } from "../data";
 
 export default async function SquadPage(props: PageProps<"/carreira/[id]/elenco">) {
   const { id } = await props.params;
   const data = await loadCareer(id);
   if (!data) return null;
-  const squad = await loadSquad(getDb(), id, data.career.clubId);
+  const squad = (await loadSquad(getDb(), id, data.clubId)).filter((p) => p.squadRole === "first");
   const avg = Math.round(squad.reduce((s, p) => s + p.overall, 0) / squad.length);
 
   return (
@@ -30,6 +31,7 @@ export default async function SquadPage(props: PageProps<"/carreira/[id]/elenco"
               <th className="p-3">J</th>
               <th className="p-3">G</th>
               <th className="p-3">Nota</th>
+              <th className="p-3">Valor</th>
               <th className="p-3">Status</th>
             </tr>
           </thead>
@@ -49,6 +51,7 @@ export default async function SquadPage(props: PageProps<"/carreira/[id]/elenco"
                 <td className="p-3">{p.appearances}</td>
                 <td className="p-3">{p.goals}</td>
                 <td className="p-3">{p.avgRating?.toFixed(1) ?? "-"}</td>
+                <td className="p-3 whitespace-nowrap">{formatMoney(p.value)}{p.transferListed && <span className="ml-1 text-xs text-amber-300">à venda</span>}</td>
                 <td className="p-3"><Status p={p} /></td>
               </tr>
             ))}
@@ -66,7 +69,7 @@ export default async function SquadPage(props: PageProps<"/carreira/[id]/elenco"
                 <span className="truncate font-semibold">{p.name}</span>
               </div>
               <div className="mt-1 flex items-center gap-2 text-xs text-[var(--color-muted)]">
-                <span>{p.age} anos</span>·<span>{p.goals} gols</span>
+                <span>{p.age} anos</span>·<span>{formatMoney(p.value)}</span>
                 <div className="w-16"><Bar value={p.condition} tone="auto" /></div>
               </div>
             </div>

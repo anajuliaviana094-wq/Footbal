@@ -17,6 +17,7 @@ export interface PlayerState {
   yellows: number;
   reds: number;
   ratingSum: number;
+  squadRole?: "first" | "youth";
 }
 
 export const YELLOW_LIMIT = 3;
@@ -47,13 +48,16 @@ export function applyRound(
   matchStats: PlayerMatchStats[],
   clubResults: Map<number, "W" | "D" | "L">,
   resistencia: Map<number, number>,
+  /** clubes que entraram em campo neste dia (suspensão só é cumprida quando o clube joga) */
+  clubsPlaying?: Set<number>,
 ): RoundNews[] {
   const news: RoundNews[] = [];
   const played = new Map(matchStats.map((s) => [s.playerId, s]));
 
   for (const st of states.values()) {
     // 1) cumprir suspensão / recuperar lesão (estado de antes da rodada)
-    if (st.suspendedRounds > 0 && !played.has(st.playerId)) st.suspendedRounds--;
+    const clubPlayed = !clubsPlaying || clubsPlaying.has(st.clubId);
+    if (st.suspendedRounds > 0 && !played.has(st.playerId) && clubPlayed) st.suspendedRounds--;
     if (st.injuryDays > 0) {
       st.injuryDays = Math.max(0, st.injuryDays - DAYS_PER_ROUND);
       if (st.injuryDays === 0) news.push({ playerId: st.playerId, clubId: st.clubId, kind: "recovered" });
@@ -85,7 +89,7 @@ export function applyRound(
         news.push({ playerId: st.playerId, clubId: st.clubId, kind: "injury", days: ms.injuryDays });
       }
       st.morale += ms.rating >= 7.5 ? 3 : ms.rating <= 5.5 ? -3 : 0;
-    } else if (isAvailable(st)) {
+    } else if (isAvailable(st) && clubPlayed && st.squadRole !== "youth") {
       st.morale -= 1.5;
     }
     if (result) st.morale += result === "W" ? 4 : result === "L" ? -4 : 0.5;

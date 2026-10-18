@@ -4,6 +4,10 @@ export type NamePool = "br" | "en" | "es" | "it" | "de" | "fr" | "sa" | "pt" | "
 
 export interface LeagueDef {
   id: string;
+  /** país/sistema de ligas */
+  systemId: string;
+  /** 1 = primeira divisão */
+  tier: number;
   name: string;
   country: string;
   flag: string;
@@ -39,6 +43,8 @@ function clubs(prefixes: string[], cities: string[], pattern: "prefix" | "suffix
 export const LEAGUES: LeagueDef[] = [
   {
     id: "pindorama-elite",
+    systemId: "pindorama",
+    tier: 1,
     name: "Liga Pindorama — Elite",
     country: "Pindorama",
     flag: "🟩",
@@ -62,6 +68,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "pindorama-acesso",
+    systemId: "pindorama",
+    tier: 2,
     name: "Liga Pindorama — Acesso",
     country: "Pindorama",
     flag: "🟩",
@@ -85,6 +93,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "albion",
+    systemId: "albion",
+    tier: 1,
     name: "Liga Albion",
     country: "Albion",
     flag: "🟥",
@@ -108,6 +118,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "hispania",
+    systemId: "hispania",
+    tier: 1,
     name: "Liga Hispânia",
     country: "Hispânia",
     flag: "🟨",
@@ -131,6 +143,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "peninsulare",
+    systemId: "peninsulare",
+    tier: 1,
     name: "Lega Peninsulare",
     country: "Peninsulare",
     flag: "🟦",
@@ -154,6 +168,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "teutonica",
+    systemId: "teutonica",
+    tier: 1,
     name: "Liga Teutônica",
     country: "Teutônia",
     flag: "⬛",
@@ -177,6 +193,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "galia",
+    systemId: "galia",
+    tier: 1,
     name: "Liga Gália",
     country: "Gália",
     flag: "🟪",
@@ -200,6 +218,8 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     id: "deserto-dourado",
+    systemId: "deserto",
+    tier: 1,
     name: "Liga do Deserto Dourado",
     country: "Deserto Dourado",
     flag: "🟫",
@@ -224,6 +244,35 @@ export const LEAGUES: LeagueDef[] = [
 ];
 
 export const LEAGUE_BY_ID = new Map(LEAGUES.map((l) => [l.id, l]));
+
+export interface LeagueSystem {
+  id: string;
+  name: string;
+  /** copa nacional (mata-mata) com todos os clubes do sistema */
+  cup: { id: string; name: string };
+  /** ligas do sistema, da 1ª divisão para baixo */
+  leagues: string[];
+  /** quantos sobem/descem entre divisões consecutivas */
+  promotionSpots: number;
+}
+
+export const SYSTEMS: LeagueSystem[] = [
+  { id: "pindorama", name: "Pindorama", cup: { id: "taca-pindorama", name: "Taça Pindorama" }, leagues: ["pindorama-elite", "pindorama-acesso"], promotionSpots: 4 },
+  { id: "albion", name: "Albion", cup: { id: "copa-albion", name: "Copa Albion" }, leagues: ["albion"], promotionSpots: 0 },
+  { id: "hispania", name: "Hispânia", cup: { id: "copa-hispania", name: "Copa Hispânia" }, leagues: ["hispania"], promotionSpots: 0 },
+  { id: "peninsulare", name: "Peninsulare", cup: { id: "coppa-peninsulare", name: "Coppa Peninsulare" }, leagues: ["peninsulare"], promotionSpots: 0 },
+  { id: "teutonica", name: "Teutônia", cup: { id: "pokal-teutonia", name: "Taça Teutônia" }, leagues: ["teutonica"], promotionSpots: 0 },
+  { id: "galia", name: "Gália", cup: { id: "coupe-galia", name: "Copa Gália" }, leagues: ["galia"], promotionSpots: 0 },
+  { id: "deserto", name: "Deserto Dourado", cup: { id: "taca-deserto", name: "Taça do Deserto" }, leagues: ["deserto-dourado"], promotionSpots: 0 },
+];
+
+export const SYSTEM_BY_ID = new Map(SYSTEMS.map((s) => [s.id, s]));
+export function systemOfLeague(leagueId: string): LeagueSystem {
+  const sid = LEAGUE_BY_ID.get(leagueId)?.systemId;
+  const sys = sid ? SYSTEM_BY_ID.get(sid) : undefined;
+  if (!sys) throw new Error(`Sistema não encontrado para ${leagueId}`);
+  return sys;
+}
 
 /** Combinações de nome famosas que nunca devem ser geradas (normalizadas, sem acento). */
 export const FAMOUS_NAME_BLOCKLIST = new Set(
