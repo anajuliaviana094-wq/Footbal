@@ -49,6 +49,7 @@ Sem `ANTHROPIC_API_KEY` o jogo funciona normalmente com narração/relatórios p
 | `npm run smoke` | teste de ponta a ponta no banco: cria usuário/carreira, faz substituição ao vivo, joga a temporada inteira e inicia a seguinte |
 | `npm run db:generate` | gera nova migration após mudar `src/db/schema.ts` |
 | `npm run db:migrate` / `db:seed` / `db:setup` | migrations / seed determinístico (upsert, pode rodar de novo) |
+| `npm run db:setup:http` | o mesmo via HTTPS (driver HTTP do Neon) — use quando a porta 5432 estiver bloqueada |
 | `npm run typecheck` / `lint` / `build` | checagens |
 
 ## Deploy (Vercel + Neon)
