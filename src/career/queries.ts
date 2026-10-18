@@ -204,3 +204,27 @@ export async function getSeasonHistory(careerId: string) {
     relegated: (r.h.relegated ?? []).map((id) => name.get(id) ?? "?"),
   }));
 }
+
+/** Último jogo disputado pelo clube na temporada (para o painel da liga com amigos). */
+export async function getLastResult(careerId: string, season: number, clubId: number) {
+  const rows = await getDb()
+    .select()
+    .from(schema.fixtures)
+    .where(
+      and(
+        eq(schema.fixtures.careerId, careerId),
+        eq(schema.fixtures.season, season),
+        eq(schema.fixtures.played, true),
+        sql`(${schema.fixtures.homeClubId} = ${clubId} or ${schema.fixtures.awayClubId} = ${clubId})`,
+      ),
+    )
+    .orderBy(desc(schema.fixtures.round))
+    .limit(1);
+  const [f] = await withClubs(rows);
+  if (!f) return null;
+  return {
+    day: f.round,
+    matchId: f.matchId,
+    text: `${f.home.shortName} ${f.homeGoals} x ${f.awayGoals} ${f.away.shortName}${f.penalties ? ` (pên. ${f.penalties})` : ""}`,
+  };
+}

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { getMembers, getUserFixture } from "@/career/service";
+import { getUserFixture } from "@/career/service";
 import { MatchCenter } from "@/components/match/MatchCenter";
 import { Crest } from "@/components/Crest";
 import { dayLabel } from "@/lib/day";
 import { loadCareer } from "../data";
-import { ReadyPanel } from "../ReadyPanel";
+import { ReadyBox } from "../ReadyBox";
 import { AdvanceDay } from "./AdvanceDay";
 
 export default async function MatchPage(props: PageProps<"/carreira/[id]/partida">) {
@@ -44,7 +44,6 @@ export default async function MatchPage(props: PageProps<"/carreira/[id]/partida
   ) : null;
 
   if (career.isMultiplayer) {
-    const members = await getMembers(id);
     return (
       <div className="mx-auto max-w-2xl space-y-4">
         {home && away ? (
@@ -60,7 +59,7 @@ export default async function MatchPage(props: PageProps<"/carreira/[id]/partida
         ) : (
           <div className="card p-6 text-center text-[var(--color-muted)]">{label}: seu time não joga neste dia.</div>
         )}
-        <ReadyPanel careerId={id} isHost={data.isHost} meReady={data.member.ready} members={members.map((m) => ({ name: m.user.name ?? m.user.email ?? "Técnico", club: m.club.name, ready: m.member.ready, me: m.member.userId === data.user.id }))} />
+        <ReadyBox data={data} />
         <div className="text-center">{replay}</div>
       </div>
     );

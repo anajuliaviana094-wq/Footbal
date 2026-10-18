@@ -1,7 +1,7 @@
 import { PageTitle } from "@/components/ui";
 import { getMembers } from "@/career/service";
 import { loadCareer } from "../data";
-import { ReadyPanel } from "../ReadyPanel";
+import { ReadyBox } from "../ReadyBox";
 import { CopyCode } from "./CopyCode";
 
 export default async function FriendsPage(props: PageProps<"/carreira/[id]/amigos">) {
@@ -19,7 +19,7 @@ export default async function FriendsPage(props: PageProps<"/carreira/[id]/amigo
         <p className="mt-2 text-sm text-[var(--color-muted)]">Seus amigos entram em <b>Minhas carreiras → Entrar com código</b> e escolhem um clube livre de qualquer divisão de {data.system.name}. Ligas premium exigem plano Premium de quem entra.</p>
       </div>
       {data.career.status === "active" && (
-        <ReadyPanel careerId={id} isHost={data.isHost} meReady={data.member.ready} members={members.map((m) => ({ name: m.user.name ?? m.user.email ?? "Técnico", club: m.club.name, ready: m.member.ready, me: m.member.userId === data.user.id }))} />
+        <ReadyBox data={data} />
       )}
       <div className="card p-5 text-sm text-[var(--color-muted)]">
         <div className="label mb-2">Como funciona</div>

@@ -128,17 +128,17 @@ export async function setReady(user: AppUser, careerId: string, ready: boolean) 
     if (members.every((m) => m.ready)) {
       const [career] = await getDb().select().from(schema.careers).where(eq(schema.careers.id, careerId));
       await processDay(careerId, career.currentRound);
-      return { processed: true };
+      return { processed: true, day: career.currentRound };
     }
   }
-  return { processed: false };
+  return { processed: false, day: null };
 }
 
 /**
  * Encerra o dia de jogo atual. Single player: finaliza a partida ao vivo (ou simula direto).
  * Liga com amigos: só o anfitrião pode forçar o processamento.
  */
-export async function playRound(user: AppUser, careerId: string): Promise<{ matchId: number | null }> {
+export async function playRound(user: AppUser, careerId: string): Promise<{ matchId: number | null; day: number }> {
   const ctx = await getCareer(user, careerId);
   if (ctx.career.status !== "active") throw new AppError("A temporada acabou. Inicie uma nova temporada.", 409, "season_over");
   let matchId: number | null = null;
@@ -153,7 +153,7 @@ export async function playRound(user: AppUser, careerId: string): Promise<{ matc
     const fx = await getUserFixture({ career: { ...ctx.career, currentRound: day }, clubId: ctx.clubId });
     matchId = fx?.matchId ?? null;
   }
-  return { matchId };
+  return { matchId, day };
 }
 
 const STORED_EVENT_TYPES = new Set(["goal", "yellow", "second_yellow", "red", "penalty", "penalty_miss", "injury", "sub"]);

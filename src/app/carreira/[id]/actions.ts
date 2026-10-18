@@ -9,7 +9,7 @@ import type { Tactics } from "@/engine/types";
 import { AppError } from "@/lib/errors";
 import { requireUser } from "@/lib/session";
 
-type Result = { ok: boolean; message?: string; error?: string; counterFee?: number };
+type Result = { ok: boolean; message?: string; error?: string; counterFee?: number; processedDay?: number };
 
 async function run(careerId: string, fn: () => Promise<string | void | Result>): Promise<Result> {
   try {
@@ -84,14 +84,15 @@ export async function readyAction(careerId: string, ready: boolean) {
   const user = await requireUser();
   return run(careerId, async () => {
     const r = await setReady(user, careerId, ready);
-    return r.processed ? "Todos prontos: rodada processada!" : ready ? "Você está pronto. Aguardando os outros técnicos." : "Marcação de pronto removida.";
+    if (r.processed) return { ok: true, message: "Todos prontos: dia processado!", processedDay: r.day ?? undefined };
+    return ready ? "Você está pronto. Aguardando os outros técnicos." : "Marcação de pronto removida.";
   });
 }
 
 export async function forceRoundAction(careerId: string) {
   const user = await requireUser();
   return run(careerId, async () => {
-    await playRound(user, careerId);
-    return "Rodada processada!";
+    const r = await playRound(user, careerId);
+    return { ok: true, message: "Dia processado!", processedDay: r.day };
   });
 }

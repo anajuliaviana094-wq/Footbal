@@ -159,19 +159,19 @@ async function DayResults({ careerId, season, userClubId, day, total, label, hre
               const evs = events.filter((g) => g.matchId === f.matchId);
               const mine = f.homeClubId === userClubId || f.awayClubId === userClubId;
               return (
-                <div key={f.id} className={`card p-3 ${mine ? "ring-1 ring-[var(--color-accent)]" : ""}`}>
+                <div key={f.id} className={`card min-w-0 p-3 ${mine ? "ring-1 ring-[var(--color-accent)]" : ""}`}>
                   <div className="flex items-center gap-2">
-                    <div className={`flex flex-1 items-center justify-end gap-2 text-right text-sm ${f.winnerClubId === f.homeClubId ? "font-bold" : ""}`}>
-                      <span className="truncate">{f.home.name}</span>
-                      <Crest crest={f.home.crest} size={24} />
+                    <div className={`flex min-w-0 flex-1 items-center justify-end gap-2 text-right text-sm ${f.winnerClubId === f.homeClubId ? "font-bold" : ""}`}>
+                      <span className="line-clamp-2 leading-tight">{f.home.name}</span>
+                      <Crest crest={f.home.crest} size={24} className="shrink-0" />
                     </div>
-                    <div className="w-20 text-center">
+                    <div className="w-16 shrink-0 text-center">
                       <div className="font-display text-xl font-bold">{f.played ? `${f.homeGoals} - ${f.awayGoals}` : "×"}</div>
                       {f.penalties && <div className="text-[10px] text-[var(--color-muted)]">pên. {f.penalties}</div>}
                     </div>
-                    <div className={`flex flex-1 items-center gap-2 text-sm ${f.winnerClubId === f.awayClubId ? "font-bold" : ""}`}>
-                      <Crest crest={f.away.crest} size={24} />
-                      <span className="truncate">{f.away.name}</span>
+                    <div className={`flex min-w-0 flex-1 items-center gap-2 text-sm ${f.winnerClubId === f.awayClubId ? "font-bold" : ""}`}>
+                      <Crest crest={f.away.crest} size={24} className="shrink-0" />
+                      <span className="line-clamp-2 leading-tight">{f.away.name}</span>
                     </div>
                   </div>
                   {evs.length > 0 && (

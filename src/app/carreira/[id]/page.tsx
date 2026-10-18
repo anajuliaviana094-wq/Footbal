@@ -2,12 +2,11 @@ import Link from "next/link";
 import { Crest } from "@/components/Crest";
 import { Bar, Stat } from "@/components/ui";
 import { getDashboard } from "@/career/queries";
-import { getMembers } from "@/career/service";
 import { formatMoney } from "@/lib/format";
 import { dayLabel } from "@/lib/day";
 import { loadCareer } from "./data";
 import { newSeasonAction } from "./actions";
-import { ReadyPanel } from "./ReadyPanel";
+import { ReadyBox } from "./ReadyBox";
 
 const NEWS_ICON: Record<string, string> = {
   result: "📣",
@@ -32,7 +31,6 @@ export default async function DashboardPage(props: PageProps<"/carreira/[id]">) 
   const me = d.table.find((t) => t.clubId === club.id);
   const next = d.nextFixtures[0];
   const nextDay = next ? career.calendar?.[next.round - 1] : null;
-  const members = career.isMultiplayer ? await getMembers(id) : [];
 
   return (
     <div className="space-y-4">
@@ -64,7 +62,7 @@ export default async function DashboardPage(props: PageProps<"/carreira/[id]">) 
       )}
 
       {career.isMultiplayer && career.status === "active" && (
-        <ReadyPanel careerId={id} isHost={data.isHost} meReady={data.member.ready} members={members.map((m) => ({ name: m.user.name ?? m.user.email ?? "Técnico", club: m.club.name, ready: m.member.ready, me: m.member.userId === data.user.id }))} />
+        <ReadyBox data={data} />
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
