@@ -10,6 +10,8 @@ export interface PitchTeam {
   shirts: (number | null)[];
   /** id do jogador por slot */
   ids: (number | null)[];
+  /** nome curto por slot */
+  names: (string | null)[];
 }
 
 interface Props {
@@ -25,7 +27,7 @@ interface Props {
 const W = 1050;
 const H = 680;
 
-/** Campo 2D em Canvas: desenha 22 jogadores + bola com interpolação entre ticks. */
+/** Campo 2D (estilo transmissão): 22 jogadores com nome, bola com rastro e destaque do lance. */
 export function PitchCanvas({ frames, getTick, home, away, getHighlights }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const propsRef = useRef({ frames, home, away, getTick, getHighlights });
@@ -58,6 +60,22 @@ export function PitchCanvas({ frames, getTick, home, away, getHighlights }: Prop
           if (!a || !b) return b ?? a;
           return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
         };
+        // rastro da bola nos últimos ticks
+        const ball = lerp(f0.b, f1.b)!;
+        ctx.strokeStyle = "rgba(255,230,120,0.85)";
+        ctx.lineWidth = 3.5 * boost;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        const from = Math.max(0, i0 - 3);
+        for (let j = from; j <= i0; j++) {
+          const [x, y] = toPx(frames[j].b);
+          if (j === from) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        const [tx, ty] = toPx(ball);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+
         const highlights = getHighlights();
         const posById = new Map<number, [number, number]>();
         for (let i = 0; i < 22; i++) {
@@ -68,10 +86,15 @@ export function PitchCanvas({ frames, getTick, home, away, getHighlights }: Prop
           const [x, y] = toPx(pos);
           const id = team.ids[slot];
           if (id) posById.set(id, [x, y]);
-          drawPlayer(ctx, x, y, team.fill, team.stroke, team.shirts[slot], boost);
+          drawPlayer(ctx, x, y, team.fill, team.stroke, team.shirts[slot], team.names[slot], boost);
         }
-        const ball = lerp(f0.b, f1.b)!;
         const [bx, by] = toPx(ball);
+        // anel destacando o lance
+        ctx.strokeStyle = "#ffd23f";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(bx, by, 26 * boost, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.beginPath();
         ctx.fillStyle = "rgba(0,0,0,0.35)";
         ctx.ellipse(bx + 3, by + 4, 8 * boost, 5 * boost, 0, 0, Math.PI * 2);
@@ -131,11 +154,19 @@ function toPx([x, y]: [number, number]): [number, number] {
 }
 
 function drawPitch(ctx: CanvasRenderingContext2D) {
-  const stripes = 12;
-  for (let i = 0; i < stripes; i++) {
-    ctx.fillStyle = i % 2 ? "#2f8a3e" : "#33963f";
-    ctx.fillRect((W / stripes) * i, 0, W / stripes + 1, H);
-  }
+  // gramado com corte em xadrez + vinheta
+  const cols = 16;
+  const rows = 10;
+  for (let i = 0; i < cols; i++)
+    for (let j = 0; j < rows; j++) {
+      ctx.fillStyle = (i + j) % 2 ? "#2e8b3d" : "#33974a";
+      ctx.fillRect((W / cols) * i, (H / rows) * j, W / cols + 1, H / rows + 1);
+    }
+  const vg = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 760);
+  vg.addColorStop(0, "rgba(0,0,0,0)");
+  vg.addColorStop(1, "rgba(0,0,0,0.4)");
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = "rgba(255,255,255,0.85)";
   ctx.lineWidth = 3;
   const l = PAD;
@@ -175,7 +206,7 @@ function drawPitch(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(r, my - 40, 12, 80);
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, fill: string, stroke: string, shirt: number | null, k: number) {
+function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, fill: string, stroke: string, shirt: number | null, name: string | null, k: number) {
   const r = 16 * k;
   ctx.beginPath();
   ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -194,6 +225,19 @@ function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, fill: s
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(String(shirt), x, y + 1);
+  }
+  if (name) {
+    ctx.font = `600 ${Math.round(11 * k)}px system-ui, sans-serif`;
+    const w = ctx.measureText(name).width + 10 * k;
+    const h = 16 * k;
+    const ty = y + r + 3 * k;
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    roundRect(ctx, x - w / 2, ty, w, h, 4 * k);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(name, x, ty + h / 2 + 0.5);
   }
 }
 

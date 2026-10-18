@@ -7,7 +7,33 @@ import type { MatchPayload, PayloadPlayer, PayloadTeam } from "@/career/match";
 import { FORMATIONS, type MatchEvent, type Side, type Tactics } from "@/engine/types";
 import { formatMinute, ratingColor } from "@/lib/format";
 import { Crest } from "../Crest";
+import dynamic from "next/dynamic";
 import { PitchCanvas, type PitchTeam } from "./PitchCanvas";
+
+// o 3D (three.js) só é baixado quando usado
+const Pitch3D = dynamic(() => import("./Pitch3D"), {
+  ssr: false,
+  loading: () => <div className="w-full animate-pulse rounded-xl bg-[#0b1220]" style={{ aspectRatio: "1050 / 680" }} />,
+});
+
+type View = "3d" | "2d";
+type Cam = "geral" | "close";
+const VIEW_KEY = "prancheta:view";
+const CAM_KEY = "prancheta:cam";
+
+function readPref<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
+  try {
+    const v = localStorage.getItem(key) as T | null;
+    return v && allowed.includes(v) ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writePref(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+}
 
 const TICKS_PER_SECOND = 2.2; // velocidade 1x (~2 min por jogo)
 const SPEEDS = [1, 2, 4] as const;
@@ -146,6 +172,17 @@ function LivePlayback({
   const tickRef = useRef(startAtEnd ? payload.finalTick : 0);
   const [tick, setTick] = useState(startAtEnd ? payload.finalTick : 0);
   const [panelTick, setPanelTick] = useState(1);
+  // LivePlayback só renderiza no navegador (após carregar a partida), então dá para ler a preferência direto
+  const [view, setView] = useState<View>(() => readPref(VIEW_KEY, ["3d", "2d"] as const, "3d"));
+  const [cam, setCam] = useState<Cam>(() => readPref(CAM_KEY, ["geral", "close"] as const, "geral"));
+  const changeView = useCallback((v: View) => {
+    setView(v);
+    writePref(VIEW_KEY, v);
+  }, []);
+  const changeCam = useCallback((c: Cam) => {
+    setCam(c);
+    writePref(CAM_KEY, c);
+  }, []);
   const [playing, setPlaying] = useState(!startAtEnd);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const [panel, setPanel] = useState(false);
@@ -229,7 +266,37 @@ function LivePlayback({
 
         {/* campo */}
         <div className="relative">
-          <PitchCanvas frames={payload.frames} getTick={getTick} home={teams.home} away={teams.away} getHighlights={getHighlights} />
+          {view === "3d" ? (
+            <Pitch3D
+              frames={payload.frames}
+              getTick={getTick}
+              home={teams.home}
+              away={teams.away}
+              getHighlights={getHighlights}
+              camera={cam}
+              onUnsupported={() => changeView("2d")}
+            />
+          ) : (
+            <PitchCanvas frames={payload.frames} getTick={getTick} home={teams.home} away={teams.away} getHighlights={getHighlights} />
+          )}
+          <div className="absolute right-2 top-2 flex gap-1">
+            <div className="flex rounded-lg bg-black/60 p-0.5 text-xs font-bold backdrop-blur">
+              {(["3d", "2d"] as const).map((v) => (
+                <button key={v} onClick={() => changeView(v)} className={`rounded-md px-2.5 py-1 ${view === v ? "bg-[var(--color-accent)] text-[#04210f]" : "text-white/70"}`}>
+                  {v.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            {view === "3d" && (
+              <div className="flex rounded-lg bg-black/60 p-0.5 text-xs font-bold backdrop-blur">
+                {(["geral", "close"] as const).map((c) => (
+                  <button key={c} onClick={() => changeCam(c)} className={`rounded-md px-2.5 py-1 capitalize ${cam === c ? "bg-white text-black" : "text-white/70"}`}>
+                    {c === "geral" ? "Geral" : "Close"}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {showGoal && lastGoal && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="animate-pop rounded-2xl bg-black/70 px-8 py-4 text-center">
@@ -564,15 +631,24 @@ function slotOccupants(payload: MatchPayload, tick: number): Record<Side, (numbe
 }
 
 function pitchTeams(payload: MatchPayload, occ: Record<Side, (number | null)[]>): { home: PitchTeam; away: PitchTeam } {
-  const shirts = new Map([...payload.home.starters, ...payload.home.bench, ...payload.away.starters, ...payload.away.bench].map((p) => [p.id, p.shirt]));
+  const all = [...payload.home.starters, ...payload.home.bench, ...payload.away.starters, ...payload.away.bench];
+  const shirts = new Map(all.map((p) => [p.id, p.shirt]));
+  const names = new Map(all.map((p) => [p.id, p.name]));
   const clash = colorDistance(payload.home.primaryColor, payload.away.primaryColor) < 120;
   return {
-    home: { fill: payload.home.primaryColor, stroke: payload.home.secondaryColor, ids: occ.home, shirts: occ.home.map((id) => (id ? shirts.get(id) ?? null : null)) },
+    home: {
+      fill: payload.home.primaryColor,
+      stroke: payload.home.secondaryColor,
+      ids: occ.home,
+      shirts: occ.home.map((id) => (id ? shirts.get(id) ?? null : null)),
+      names: occ.home.map((id) => (id ? names.get(id) ?? null : null)),
+    },
     away: {
       fill: clash ? payload.away.secondaryColor : payload.away.primaryColor,
       stroke: clash ? payload.away.primaryColor : payload.away.secondaryColor,
       ids: occ.away,
       shirts: occ.away.map((id) => (id ? shirts.get(id) ?? null : null)),
+      names: occ.away.map((id) => (id ? names.get(id) ?? null : null)),
     },
   };
 }
