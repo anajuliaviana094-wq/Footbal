@@ -18,7 +18,9 @@ export default async function PlansPage(props: PageProps<"/planos">) {
         <PageTitle title="Planos" subtitle="Comece grátis. Libere todas as ligas quando quiser." />
         {sp.status === "sucesso" && (
           <p className="mb-4 rounded-lg bg-emerald-500/15 px-4 py-3 text-emerald-200">
-            Pagamento recebido! Seu plano Premium é ativado assim que o pagamento for confirmado (geralmente em segundos).
+            {user?.plan === "premium"
+              ? "Bem-vindo ao Premium! Todas as ligas estão liberadas."
+              : "Pagamento recebido! Seu plano Premium é ativado assim que o pagamento for confirmado (geralmente em segundos). Recarregue a página em instantes."}
           </p>
         )}
         {sp.status === "cancelado" && <p className="mb-4 rounded-lg bg-white/5 px-4 py-3 text-[var(--color-muted)]">Checkout cancelado.</p>}
